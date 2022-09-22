@@ -2,6 +2,8 @@ package com.example.demo.controllers;
 
 import java.util.Optional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +24,8 @@ import com.example.demo.model.requests.CreateUserRequest;
 @RestController
 @RequestMapping("/api/user")
 public class UserController {
+
+	private final static Logger log = LoggerFactory.getLogger(UserController.class);
 	
 	@Autowired
 	private UserRepository userRepository;
@@ -34,12 +38,20 @@ public class UserController {
 
 	@GetMapping("/id/{id}")
 	public ResponseEntity<User> findById(@PathVariable Long id) {
+
+		log.info("Found User with Id {}", id);
 		return ResponseEntity.of(userRepository.findById(id));
 	}
 	
 	@GetMapping("/{username}")
 	public ResponseEntity<User> findByUserName(@PathVariable String username) {
 		User user = userRepository.findByUsername(username);
+		if(user == null) {
+			log.info("User {} not found", username);
+		}
+		else {
+			log.info("User {} found", username);
+		}
 		return user == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(user);
 	}
 	
@@ -52,11 +64,13 @@ public class UserController {
 		user.setCart(cart);
 		if(createUserRequest.getPassword().length() < 8 ||
 		!createUserRequest.getPassword().equals(createUserRequest.getConfirmPassword())) {
-			System.out.println("Error with user password. Cannot create user " + createUserRequest.getUsername());
+			log.error("Password provided should be 8 characters or more. Cannot create user {}",
+					createUserRequest.getUsername());
 			return ResponseEntity.badRequest().build();
 		}
 		user.setPassword(bCryptPasswordEncoder.encode(createUserRequest.getPassword()));
 		userRepository.save(user);
+		log.info("User {} created successfully", createUserRequest.getUsername());
 		return ResponseEntity.ok(user);
 	}
 	
